@@ -10,7 +10,8 @@ import math
 import os
 import datetime
 import numpy as np
-from sklearn.externals import joblib
+# from sklearn.externals import joblib
+import joblib
 from tqdm import tqdm
 from utils import grouper, sliding_window, count_sliding_window,\
                   camel_to_snake
@@ -456,9 +457,9 @@ class ChenEtAl(nn.Module):
 
         self.conv1 = nn.Conv3d(1, n_planes, (32, 4, 4))
         self.pool1 = nn.MaxPool3d((1, 2, 2))
-        self.conv2 = nn.Conv3d(n_planes, n_planes, (32, 4, 4))
+        self.conv2 = nn.Conv3d(n_planes, n_planes, (24, 4, 4))
         self.pool2 = nn.MaxPool3d((1, 2, 2))
-        self.conv3 = nn.Conv3d(n_planes, n_planes, (32, 4, 4))
+        self.conv3 = nn.Conv3d(n_planes, n_planes, (1, 4, 4))
 
         self.features_size = self._get_final_flattened_size()
 

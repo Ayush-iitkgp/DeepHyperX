@@ -27,6 +27,8 @@ from skimage import io
 # Visualization
 import seaborn as sns
 import visdom
+from PIL import Image
+
 
 import os
 from utils import metrics, convert_to_color_, convert_from_color_,\
@@ -152,24 +154,80 @@ TRAIN_GT = args.train_set
 TEST_GT = args.test_set
 TEST_STRIDE = args.test_stride
 
-if args.download is not None and len(args.download) > 0:
-    for dataset in args.download:
-        get_dataset(dataset, target_folder=FOLDER)
-    quit()
+# if args.download is not None and len(args.download) > 0:
+#     for dataset in args.download:
+#         get_dataset(dataset, target_folder=FOLDER)
+#     quit()
 
-viz = visdom.Visdom(env=DATASET + ' ' + MODEL)
-if not viz.check_connection:
-    print("Visdom is not connected. Did you run 'python -m visdom.server' ?")
+# viz = visdom.Visdom(env=DATASET + ' ' + MODEL)
+# if not viz.check_connection:
+#     print("Visdom is not connected. Did you run 'python -m visdom.server' ?")
 
 
 hyperparams = vars(args)
 # Load the dataset
-img, gt, LABEL_VALUES, IGNORED_LABELS, RGB_BANDS, palette = get_dataset(DATASET,
-                                                               FOLDER)
+# img, gt, LABEL_VALUES, IGNORED_LABELS, RGB_BANDS, palette = get_dataset(DATASET,
+                                                            #    FOLDER)
+def file_name_train(subject_id):
+    mapname = '{}.png'.format('Prashant/Train_Data/Map/TumorMap' + str(subject_id))
+    tiffname = '{}.tiff'.format('Prashant/Train_Data/ROI/rfImages' + str(subject_id))
+    return mapname, tiffname
+
+def file_name_test(subject_id):
+    mapname = '{}.png'.format('Prashant/Test_Data/Map/TumorMap' + str(subject_id))
+    tiffname = '{}.tiff'.format('Prashant/Test_Data/ROI/rfImages' + str(subject_id))
+    return mapname, tiffname
+
+# train_num = [61, 62, 100, 101, 120, 121, 123, 138]
+train_num = [61]
+img = np.empty(shape=[0, 540, 55])
+train_gt =  np.empty(shape=[0,540])
+for num in train_num:
+    map_image,tiff_image = file_name_train(num)
+    img_k = Image.open(map_image)
+    img_arr = np.array(img_k)
+    img_arr = img_arr
+    y_tmp = img_arr[:,:,1]
+    train_gt = np.append(train_gt, y_tmp, axis = 0)
+
+    im = Image.open(tiff_image)
+    h,w = np.array(im).shape
+    tiffarray = np.zeros((h,w,im.n_frames))
+
+    for i in range(im.n_frames):
+        im.seek(i)
+        tiffarray[:,:,i] = np.array(im)
+    # tiffarray = tiffarray.
+    img = np.append(img, tiffarray, axis = 0)
+
+LABEL_VALUES = [0, 255]
+IGNORED_LABELS = []
+RGB_BANDS = [] 
 # Number of classes
 N_CLASSES = len(LABEL_VALUES)
 # Number of bands (last dimension of the image tensor)
 N_BANDS = img.shape[-1]
+
+test_num = [76]
+img_test = np.empty(shape=[0, 540, 55])
+test_gt =  np.empty(shape=[0,540])
+for num in test_num:
+    map_image,tiff_image = file_name_test(num)
+    img_k = Image.open(map_image)
+    img_arr = np.array(img_k)
+    img_arr = img_arr
+    y_tmp = img_arr[:,:,1]
+    test_gt = np.append(test_gt, y_tmp, axis = 0)
+
+    im = Image.open(tiff_image)
+    h,w = np.array(im).shape
+    tiffarray = np.zeros((h,w,im.n_frames))
+
+    for i in range(im.n_frames):
+        im.seek(i)
+        tiffarray[:,:,i] = np.array(im)
+    # tiffarray = tiffarray.
+    img_test = np.append(img_test, tiffarray, axis = 0)
 
 # Parameters for the SVM grid search
 SVM_GRID_PARAMS = [{'kernel': ['rbf'], 'gamma': [1e-1, 1e-2, 1e-3],
@@ -177,6 +235,7 @@ SVM_GRID_PARAMS = [{'kernel': ['rbf'], 'gamma': [1e-1, 1e-2, 1e-3],
                    {'kernel': ['linear'], 'C': [0.1, 1, 10, 100, 1000]},
                    {'kernel': ['poly'], 'degree': [3], 'gamma': [1e-1, 1e-2, 1e-3]}]
 
+palette = None
 if palette is None:
     # Generate color palette
     palette = {0: (0, 0, 0)}
@@ -195,8 +254,8 @@ hyperparams.update({'n_classes': N_CLASSES, 'n_bands': N_BANDS, 'ignored_labels'
 hyperparams = dict((k, v) for k, v in hyperparams.items() if v is not None)
 
 # Show the image and the ground truth
-display_dataset(img, gt, RGB_BANDS, LABEL_VALUES, palette, viz)
-color_gt = convert_to_color(gt)
+# display_dataset(img, gt, RGB_BANDS, LABEL_VALUES, palette, viz)
+# color_gt = convert_to_color(gt)
 
 if DATAVIZ:
     # Data exploration : compute and show the mean spectrums
@@ -207,26 +266,27 @@ if DATAVIZ:
 results = []
 # run the experiment several times
 for run in range(N_RUNS):
-    if TRAIN_GT is not None and TEST_GT is not None:
-        train_gt = open_file(TRAIN_GT)
-        test_gt = open_file(TEST_GT)
-    elif TRAIN_GT is not None:
-        train_gt = open_file(TRAIN_GT)
-        test_gt = np.copy(gt)
-        w, h = test_gt.shape
-        test_gt[(train_gt > 0)[:w,:h]] = 0
-    elif TEST_GT is not None:
-        test_gt = open_file(TEST_GT)
-    else:
-	# Sample random training spectra
-        train_gt, test_gt = sample_gt(gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE)
-    print("{} samples selected (over {})".format(np.count_nonzero(train_gt),
-                                                 np.count_nonzero(gt)))
-    print("Running an experiment with the {} model".format(MODEL),
-          "run {}/{}".format(run + 1, N_RUNS))
 
-    display_predictions(convert_to_color(train_gt), viz, caption="Train ground truth")
-    display_predictions(convert_to_color(test_gt), viz, caption="Test ground truth")
+    # if TRAIN_GT is not None and TEST_GT is not None:
+    #     train_gt = open_file(TRAIN_GT)
+    #     test_gt = open_file(TEST_GT)
+    # elif TRAIN_GT is not None:
+    #     train_gt = open_file(TRAIN_GT)
+    #     test_gt = np.copy(gt)
+    #     w, h = test_gt.shape
+    #     test_gt[(train_gt > 0)[:w,:h]] = 0
+    # elif TEST_GT is not None:
+    #     test_gt = open_file(TEST_GT)
+    # else:
+	# # Sample random training spectra
+    #     train_gt, test_gt = sample_gt(gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE)
+    # print("{} samples selected (over {})".format(np.count_nonzero(train_gt),
+    #                                              np.count_nonzero(gt)))
+    # print("Running an experiment with the {} model".format(MODEL),
+    #       "run {}/{}".format(run + 1, N_RUNS))
+
+    # display_predictions(convert_to_color(train_gt), viz, caption="Train ground truth")
+    # display_predictions(convert_to_color(test_gt), viz, caption="Test ground truth")
 
     if MODEL == 'SVM_grid':
         print("Running a grid search SVM")
@@ -308,13 +368,12 @@ for run in range(N_RUNS):
         try:
             train(model, optimizer, loss, train_loader, hyperparams['epoch'],
                   scheduler=hyperparams['scheduler'], device=hyperparams['device'],
-                  supervision=hyperparams['supervision'], val_loader=val_loader,
-                  display=viz)
+                  supervision=hyperparams['supervision'], val_loader=val_loader)
         except KeyboardInterrupt:
             # Allow the user to stop the training
             pass
 
-        probabilities = test(model, img, hyperparams)
+        probabilities = test(model, img_test, hyperparams)
         prediction = np.argmax(probabilities, axis=-1)
 
     run_results = metrics(prediction, test_gt, ignored_labels=hyperparams['ignored_labels'], n_classes=N_CLASSES)

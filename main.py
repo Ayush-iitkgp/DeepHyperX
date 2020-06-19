@@ -254,8 +254,8 @@ def convert_from_color(x):
 hyperparams.update({'n_classes': N_CLASSES, 'n_bands': N_BANDS, 'ignored_labels': IGNORED_LABELS, 'device': CUDA_DEVICE})
 hyperparams = dict((k, v) for k, v in hyperparams.items() if v is not None)
 
-# train_num = [61, 62, 100, 101, 120, 121, 123, 138]
-train_num = [61]
+train_num = [61, 62, 100, 101, 120, 121, 123, 138]
+# train_num = [61]
 test_num = [76]
 
 results = []

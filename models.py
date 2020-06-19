@@ -1017,26 +1017,27 @@ def train(net, optimizer, criterion, data_loader, epoch, scheduler=None,
                     len(data), len(data) * len(data_loader),
                     100. * batch_idx / len(data_loader), mean_losses[iter_])
                 update = None if loss_win is None else 'append'
-                loss_win = display.line(
-                    X=np.arange(iter_ - display_iter, iter_),
-                    Y=mean_losses[iter_ - display_iter:iter_],
-                    win=loss_win,
-                    update=update,
-                    opts={'title': "Training loss",
-                          'xlabel': "Iterations",
-                          'ylabel': "Loss"
-                         }
-                )
+                # loss_win = display.line(
+                #     X=np.arange(iter_ - display_iter, iter_),
+                #     Y=mean_losses[iter_ - display_iter:iter_],
+                #     win=loss_win,
+                #     update=update,
+                #     opts={'title': "Training loss",
+                #           'xlabel': "Iterations",
+                #           'ylabel': "Loss"
+                #          }
+                # )
                 tqdm.write(string)
 
                 if len(val_accuracies) > 0:
-                    val_win = display.line(Y=np.array(val_accuracies),
-                                           X=np.arange(len(val_accuracies)),
-                                           win=val_win,
-                                           opts={'title': "Validation accuracy",
-                                                 'xlabel': "Epochs",
-                                                 'ylabel': "Accuracy"
-                                                })
+                    pass
+                    # val_win = display.line(Y=np.array(val_accuracies),
+                    #                        X=np.arange(len(val_accuracies)),
+                    #                        win=val_win,
+                    #                        opts={'title': "Validation accuracy",
+                    #                              'xlabel': "Epochs",
+                    #                              'ylabel': "Accuracy"
+                    #                             })
             iter_ += 1
             del(data, target, loss, output)
 
@@ -1063,7 +1064,7 @@ def save_model(model, model_name, dataset_name, **kwargs):
      if not os.path.isdir(model_dir):
          os.makedirs(model_dir, exist_ok=True)
      if isinstance(model, torch.nn.Module):
-         filename = str(datetime.datetime.now()) + "_epoch{epoch}_{metric:.2f}".format(**kwargs)
+         filename = str(datetime.datetime.now().time()) + "_epoch{epoch}_{metric:.2f}".format(**kwargs)
          tqdm.write("Saving neural network weights in {}".format(filename))
          torch.save(model.state_dict(), model_dir + filename + '.pth')
      else:

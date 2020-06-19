@@ -360,12 +360,12 @@ def show_results(results, vis, label_values=None, agregated=False):
         F1scores = results["F1 scores"]
         kappa = results["Kappa"]
 
-    vis.heatmap(cm, opts={'title': "Confusion matrix", 
-                          'marginbottom': 150,
-                          'marginleft': 150,
-                          'width': 500,
-                          'height': 500,
-                          'rownames': label_values, 'columnnames': label_values})
+    # vis.heatmap(cm, opts={'title': "Confusion matrix", 
+    #                       'marginbottom': 150,
+    #                       'marginleft': 150,
+    #                       'width': 500,
+    #                       'height': 500,
+    #                       'rownames': label_values, 'columnnames': label_values})
     text += "Confusion matrix :\n"
     text += str(cm)
     text += "---\n"
@@ -393,7 +393,7 @@ def show_results(results, vis, label_values=None, agregated=False):
     else:
         text += "Kappa: {:.03f}\n".format(kappa)
 
-    vis.text(text.replace('\n', '<br/>'))
+    # vis.text(text.replace('\n', '<br/>'))
     print(text)
 
 

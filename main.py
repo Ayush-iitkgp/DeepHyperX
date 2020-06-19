@@ -178,16 +178,23 @@ def file_name_test(subject_id):
     tiffname = '{}.tiff'.format('Prashant/Test_Data/ROI/rfImages' + str(subject_id))
     return mapname, tiffname
 
-# train_num = [61, 62, 100, 101, 120, 121, 123, 138]
-train_num = [61]
-img = np.empty(shape=[0, 540, 55])
-train_gt =  np.empty(shape=[0,540])
-for num in train_num:
+LABEL_VALUES = [0, 1]
+IGNORED_LABELS = []
+RGB_BANDS = [] 
+# Number of classes
+N_CLASSES = len(LABEL_VALUES)
+# Number of bands (last dimension of the image tensor)
+N_BANDS = 55
+
+def get_training_data(num):
+    img = np.empty(shape=[0, 540, 55])
+    train_gt =  np.empty(shape=[0,540])
+    
     map_image,tiff_image = file_name_train(num)
     img_k = Image.open(map_image)
     img_arr = np.array(img_k)
     img_arr = img_arr
-    y_tmp = img_arr[:,:,1]
+    y_tmp = img_arr[:,:,1] == 255
     train_gt = np.append(train_gt, y_tmp, axis = 0)
 
     im = Image.open(tiff_image)
@@ -197,26 +204,19 @@ for num in train_num:
     for i in range(im.n_frames):
         im.seek(i)
         tiffarray[:,:,i] = np.array(im)
-    # tiffarray = tiffarray.
+    
     img = np.append(img, tiffarray, axis = 0)
+    return img, train_gt
 
-LABEL_VALUES = [0, 255]
-IGNORED_LABELS = []
-RGB_BANDS = [] 
-# Number of classes
-N_CLASSES = len(LABEL_VALUES)
-# Number of bands (last dimension of the image tensor)
-N_BANDS = img.shape[-1]
+def get_testing_data(num):
+    img_test = np.empty(shape=[0, 540, 55])
+    test_gt =  np.empty(shape=[0,540])
 
-test_num = [76]
-img_test = np.empty(shape=[0, 540, 55])
-test_gt =  np.empty(shape=[0,540])
-for num in test_num:
     map_image,tiff_image = file_name_test(num)
     img_k = Image.open(map_image)
     img_arr = np.array(img_k)
     img_arr = img_arr
-    y_tmp = img_arr[:,:,1]
+    y_tmp = img_arr[:,:,1] == 255
     test_gt = np.append(test_gt, y_tmp, axis = 0)
 
     im = Image.open(tiff_image)
@@ -228,6 +228,7 @@ for num in test_num:
         tiffarray[:,:,i] = np.array(im)
     # tiffarray = tiffarray.
     img_test = np.append(img_test, tiffarray, axis = 0)
+    return img_test, test_gt
 
 # Parameters for the SVM grid search
 SVM_GRID_PARAMS = [{'kernel': ['rbf'], 'gamma': [1e-1, 1e-2, 1e-3],
@@ -253,142 +254,63 @@ def convert_from_color(x):
 hyperparams.update({'n_classes': N_CLASSES, 'n_bands': N_BANDS, 'ignored_labels': IGNORED_LABELS, 'device': CUDA_DEVICE})
 hyperparams = dict((k, v) for k, v in hyperparams.items() if v is not None)
 
-# Show the image and the ground truth
-# display_dataset(img, gt, RGB_BANDS, LABEL_VALUES, palette, viz)
-# color_gt = convert_to_color(gt)
-
-if DATAVIZ:
-    # Data exploration : compute and show the mean spectrums
-    mean_spectrums = explore_spectrums(img, gt, LABEL_VALUES, viz,
-                                       ignored_labels=IGNORED_LABELS)
-    plot_spectrums(mean_spectrums, viz, title='Mean spectrum/class')
+# train_num = [61, 62, 100, 101, 120, 121, 123, 138]
+train_num = [61]
+test_num = [76]
 
 results = []
-# run the experiment several times
+N_RUNS = len(train_num)
 for run in range(N_RUNS):
-
-    # if TRAIN_GT is not None and TEST_GT is not None:
-    #     train_gt = open_file(TRAIN_GT)
-    #     test_gt = open_file(TEST_GT)
-    # elif TRAIN_GT is not None:
-    #     train_gt = open_file(TRAIN_GT)
-    #     test_gt = np.copy(gt)
-    #     w, h = test_gt.shape
-    #     test_gt[(train_gt > 0)[:w,:h]] = 0
-    # elif TEST_GT is not None:
-    #     test_gt = open_file(TEST_GT)
-    # else:
-	# # Sample random training spectra
-    #     train_gt, test_gt = sample_gt(gt, SAMPLE_PERCENTAGE, mode=SAMPLING_MODE)
-    # print("{} samples selected (over {})".format(np.count_nonzero(train_gt),
-    #                                              np.count_nonzero(gt)))
-    # print("Running an experiment with the {} model".format(MODEL),
-    #       "run {}/{}".format(run + 1, N_RUNS))
-
-    # display_predictions(convert_to_color(train_gt), viz, caption="Train ground truth")
-    # display_predictions(convert_to_color(test_gt), viz, caption="Test ground truth")
-
-    if MODEL == 'SVM_grid':
-        print("Running a grid search SVM")
-        # Grid search SVM (linear and RBF)
-        X_train, y_train = build_dataset(img, train_gt,
-                                         ignored_labels=IGNORED_LABELS)
-        class_weight = 'balanced' if CLASS_BALANCING else None
-        clf = sklearn.svm.SVC(class_weight=class_weight)
-        clf = sklearn.model_selection.GridSearchCV(clf, SVM_GRID_PARAMS, verbose=5, n_jobs=4)
-        clf.fit(X_train, y_train)
-        print("SVM best parameters : {}".format(clf.best_params_))
-        prediction = clf.predict(img.reshape(-1, N_BANDS))
-        save_model(clf, MODEL, DATASET)
-        prediction = prediction.reshape(img.shape[:2])
-    elif MODEL == 'SVM':
-        X_train, y_train = build_dataset(img, train_gt,
-                                         ignored_labels=IGNORED_LABELS)
-        class_weight = 'balanced' if CLASS_BALANCING else None
-        clf = sklearn.svm.SVC(class_weight=class_weight)
-        clf.fit(X_train, y_train)
-        save_model(clf, MODEL, DATASET)
-        prediction = clf.predict(img.reshape(-1, N_BANDS))
-        prediction = prediction.reshape(img.shape[:2])
-    elif MODEL == 'SGD':
-        X_train, y_train = build_dataset(img, train_gt,
-                                         ignored_labels=IGNORED_LABELS)
-        X_train, y_train = sklearn.utils.shuffle(X_train, y_train)
-        scaler = sklearn.preprocessing.StandardScaler()
-        X_train = scaler.fit_transform(X_train)
-        class_weight = 'balanced' if CLASS_BALANCING else None
-        clf = sklearn.linear_model.SGDClassifier(class_weight=class_weight, learning_rate='optimal', tol=1e-3, average=10)
-        clf.fit(X_train, y_train)
-        save_model(clf, MODEL, DATASET)
-        prediction = clf.predict(scaler.transform(img.reshape(-1, N_BANDS)))
-        prediction = prediction.reshape(img.shape[:2])
-    elif MODEL == 'nearest':
-        X_train, y_train = build_dataset(img, train_gt,
-                                         ignored_labels=IGNORED_LABELS)
-        X_train, y_train = sklearn.utils.shuffle(X_train, y_train)
-        class_weight = 'balanced' if CLASS_BALANCING else None
-        clf = sklearn.neighbors.KNeighborsClassifier(weights='distance')
-        clf = sklearn.model_selection.GridSearchCV(clf, {'n_neighbors': [1, 3, 5, 10, 20]}, verbose=5, n_jobs=4)
-        clf.fit(X_train, y_train)
-        clf.fit(X_train, y_train)
-        save_model(clf, MODEL, DATASET)
-        prediction = clf.predict(img.reshape(-1, N_BANDS))
-        prediction = prediction.reshape(img.shape[:2])
-    else:
-        # Neural network
-        model, optimizer, loss, hyperparams = get_model(MODEL, **hyperparams)
-        if CLASS_BALANCING:
-            weights = compute_imf_weights(train_gt, N_CLASSES, IGNORED_LABELS)
-            hyperparams['weights'] = torch.from_numpy(weights)
-        # Split train set in train/val
-        train_gt, val_gt = sample_gt(train_gt, 0.95, mode='random')
-        # Generate the dataset
-        train_dataset = HyperX(img, train_gt, **hyperparams)
-        train_loader = data.DataLoader(train_dataset,
+    print(run)
+    img, train_gt = get_training_data(train_num[run])
+    model, optimizer, loss, hyperparams = get_model(MODEL, **hyperparams)
+    if CLASS_BALANCING:
+        weights = compute_imf_weights(train_gt, N_CLASSES, IGNORED_LABELS)
+        hyperparams['weights'] = torch.from_numpy(weights)
+    
+    train_gt, val_gt = sample_gt(train_gt, 0.95, mode='random')
+    # Generate the dataset
+    train_dataset = HyperX(img, train_gt, **hyperparams)
+    train_loader = data.DataLoader(train_dataset,
                                        batch_size=hyperparams['batch_size'],
                                        #pin_memory=hyperparams['device'],
                                        shuffle=True)
-        val_dataset = HyperX(img, val_gt, **hyperparams)
-        val_loader = data.DataLoader(val_dataset,
+    val_dataset = HyperX(img, val_gt, **hyperparams)
+    val_loader = data.DataLoader(val_dataset,
                                      #pin_memory=hyperparams['device'],
                                      batch_size=hyperparams['batch_size'])
 
-        print(hyperparams)
-        print("Network :")
-        with torch.no_grad():
-            for input, _ in train_loader:
-                break
-            summary(model.to(hyperparams['device']), input.size()[1:])
-            # We would like to use device=hyperparams['device'] altough we have
-            # to wait for torchsummary to be fixed first.
+    print(hyperparams)
+    print("Network :")
+    with torch.no_grad():
+        for input, _ in train_loader:
+            break
+        summary(model.to(hyperparams['device']), input.size()[1:])
 
-        if CHECKPOINT is not None:
-            model.load_state_dict(torch.load(CHECKPOINT))
+    if CHECKPOINT is not None:
+        model.load_state_dict(torch.load(CHECKPOINT))
 
-        try:
-            train(model, optimizer, loss, train_loader, hyperparams['epoch'],
+    try:
+        train(model, optimizer, loss, train_loader, hyperparams['epoch'],
                   scheduler=hyperparams['scheduler'], device=hyperparams['device'],
                   supervision=hyperparams['supervision'], val_loader=val_loader)
-        except KeyboardInterrupt:
-            # Allow the user to stop the training
-            pass
+    except KeyboardInterrupt:
+        pass
 
-        probabilities = test(model, img_test, hyperparams)
-        prediction = np.argmax(probabilities, axis=-1)
+    img_test, test_gt = get_testing_data(test_num[0])
+    probabilities = test(model, img_test, hyperparams)
+    prediction = np.argmax(probabilities, axis=-1)
 
     run_results = metrics(prediction, test_gt, ignored_labels=hyperparams['ignored_labels'], n_classes=N_CLASSES)
 
-    mask = np.zeros(gt.shape, dtype='bool')
+    mask = np.zeros(test_gt.shape, dtype='bool')
     for l in IGNORED_LABELS:
-        mask[gt == l] = True
+        mask[test_gt == l] = True
     prediction[mask] = 0
 
     color_prediction = convert_to_color(prediction)
-    display_predictions(color_prediction, viz, gt=convert_to_color(test_gt), caption="Prediction vs. test ground truth")
-
     results.append(run_results)
-    show_results(run_results, viz, label_values=LABEL_VALUES)
 
 if N_RUNS > 1:
-    show_results(results, viz, label_values=LABEL_VALUES, agregated=True)
+    show_results(results, None, label_values=LABEL_VALUES, agregated=True)
 

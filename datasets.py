@@ -242,7 +242,7 @@ class HyperX(torch.utils.data.Dataset):
         super(HyperX, self).__init__()
         self.data = data
         self.label = gt
-        # self.name = hyperparams['dataset']
+        self.name = hyperparams['dataset']
         self.patch_size = hyperparams['patch_size']
         self.ignored_labels = set(hyperparams['ignored_labels'])
         self.flip_augmentation = hyperparams['flip_augmentation']

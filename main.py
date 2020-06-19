@@ -298,7 +298,7 @@ for run in range(N_RUNS):
         pass
 
     img_test, test_gt = get_testing_data(test_num[0])
-    probabilities = test(model, img_test, hyperparams)
+    probabilities = test(model, img_test.astype(float), hyperparams)
     prediction = np.argmax(probabilities, axis=-1)
 
     run_results = metrics(prediction, test_gt, ignored_labels=hyperparams['ignored_labels'], n_classes=N_CLASSES)

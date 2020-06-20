@@ -268,7 +268,7 @@ for run in range(N_RUNS):
         weights = compute_imf_weights(train_gt, N_CLASSES, IGNORED_LABELS)
         hyperparams['weights'] = torch.from_numpy(weights)
     
-    train_gt, val_gt = sample_gt(train_gt, 0.95, mode='random')
+    train_gt, val_gt = sample_gt(train_gt, SAMPLE_PERCENTAGE, mode='random')
     # Generate the dataset
     train_dataset = HyperX(img, train_gt, **hyperparams)
     train_loader = data.DataLoader(train_dataset,

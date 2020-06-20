@@ -271,11 +271,13 @@ for run in range(N_RUNS):
     train_gt, val_gt = sample_gt(train_gt, SAMPLE_PERCENTAGE, mode='random')
     # Generate the dataset
     train_dataset = HyperX(img, train_gt, **hyperparams)
+    print(train_dataset.data.shape)
     train_loader = data.DataLoader(train_dataset,
                                        batch_size=hyperparams['batch_size'],
                                        #pin_memory=hyperparams['device'],
                                        shuffle=True)
     val_dataset = HyperX(img, val_gt, **hyperparams)
+    print(val_dataset.data.shape)
     val_loader = data.DataLoader(val_dataset,
                                      #pin_memory=hyperparams['device'],
                                      batch_size=hyperparams['batch_size'])
@@ -298,10 +300,10 @@ for run in range(N_RUNS):
         pass
 
     img_test, test_gt = get_testing_data(test_num[0])
-    probabilities = test(model, img_test.astype(np.uint32), hyperparams)
+    probabilities = test(model, img_test.astype(np.double), hyperparams)
     prediction = np.argmax(probabilities, axis=-1)
 
-    run_results = metrics(prediction, test_gt.astype(np.uint32), ignored_labels=hyperparams['ignored_labels'], n_classes=N_CLASSES)
+    run_results = metrics(prediction, test_gt.astype(np.double), ignored_labels=hyperparams['ignored_labels'], n_classes=N_CLASSES)
 
     mask = np.zeros(test_gt.shape, dtype='bool')
     for l in IGNORED_LABELS:

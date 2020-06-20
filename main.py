@@ -298,10 +298,10 @@ for run in range(N_RUNS):
         pass
 
     img_test, test_gt = get_testing_data(test_num[0])
-    probabilities = test(model, img_test.astype(long), hyperparams)
+    probabilities = test(model, img_test.astype(np.uint32), hyperparams)
     prediction = np.argmax(probabilities, axis=-1)
 
-    run_results = metrics(prediction, test_gt.astype(long), ignored_labels=hyperparams['ignored_labels'], n_classes=N_CLASSES)
+    run_results = metrics(prediction, test_gt.astype(np.uint32), ignored_labels=hyperparams['ignored_labels'], n_classes=N_CLASSES)
 
     mask = np.zeros(test_gt.shape, dtype='bool')
     for l in IGNORED_LABELS:

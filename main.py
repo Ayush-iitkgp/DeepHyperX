@@ -293,6 +293,7 @@ for run in range(N_RUNS):
         model.load_state_dict(torch.load(CHECKPOINT))
 
     try:
+        # pass
         train(model, optimizer, loss, train_loader, hyperparams['epoch'],
                   scheduler=hyperparams['scheduler'], device=hyperparams['device'],
                   supervision=hyperparams['supervision'], val_loader=val_loader)

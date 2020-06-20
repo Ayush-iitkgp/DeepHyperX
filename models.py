@@ -1105,6 +1105,7 @@ def test(net, img, hyperparams):
 
             indices = [b[1:] for b in batch]
             data = data.to(device)
+            net = net.to(torch.double)
             output = net(data)
             if isinstance(output, tuple):
                 output = output[0]

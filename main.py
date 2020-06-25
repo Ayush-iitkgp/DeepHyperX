@@ -147,7 +147,8 @@ CHECKPOINT = args.restore
 # Learning rate for the SGD
 LEARNING_RATE = args.lr
 # Automated class balancing
-CLASS_BALANCING = args.class_balancing
+CLASS_BALANCING = True
+# CLASS_BALANCING = args.class_balancing
 # Training ground truth file
 TRAIN_GT = args.train_set
 # Testing ground truth file
@@ -256,18 +257,24 @@ hyperparams = dict((k, v) for k, v in hyperparams.items() if v is not None)
 
 train_num = [61, 62, 100, 101, 120, 121, 123, 138]
 # train_num = [61]
-test_num = [76]
+test_num = [61]
 
 results = []
 N_RUNS = len(train_num)
+img, train_gt = get_training_data(train_num[0])
+if CLASS_BALANCING:
+    weights = compute_imf_weights(train_gt, N_CLASSES, IGNORED_LABELS)
+    print(weights.shape)
+    hyperparams['weights'] = torch.from_numpy(weights)
+
+model, optimizer, loss, hyperparams = get_model(MODEL, **hyperparams)
+
+if CHECKPOINT is not None:
+    model.load_state_dict(torch.load(CHECKPOINT))
+
 for run in range(N_RUNS):
     print(run)
     img, train_gt = get_training_data(train_num[run])
-    model, optimizer, loss, hyperparams = get_model(MODEL, **hyperparams)
-    if CLASS_BALANCING:
-        weights = compute_imf_weights(train_gt, N_CLASSES, IGNORED_LABELS)
-        hyperparams['weights'] = torch.from_numpy(weights)
-    
     train_gt, val_gt = sample_gt(train_gt, SAMPLE_PERCENTAGE, mode='random')
     # Generate the dataset
     train_dataset = HyperX(img, train_gt, **hyperparams)
@@ -287,24 +294,24 @@ for run in range(N_RUNS):
     with torch.no_grad():
         for input, _ in train_loader:
             break
-        summary(model.to(hyperparams['device']), input.size()[1:])
-
-    if CHECKPOINT is not None:
-        model.load_state_dict(torch.load(CHECKPOINT))
+        # summary(model.to(hyperparams['device']), input.size()[1:])
 
     try:
-        # pass
-        train(model, optimizer, loss, train_loader, hyperparams['epoch'],
-                  scheduler=hyperparams['scheduler'], device=hyperparams['device'],
-                  supervision=hyperparams['supervision'], val_loader=val_loader)
+        pass
+        # train(model, optimizer, loss, train_loader, hyperparams['epoch'],
+        #           scheduler=hyperparams['scheduler'], device=hyperparams['device'],
+        #           supervision=hyperparams['supervision'], val_loader=val_loader)
     except KeyboardInterrupt:
         pass
+
+if N_RUNS >= 1:
 
     img_test, test_gt = get_testing_data(test_num[0])
     probabilities = test(model, img_test.astype(np.double), hyperparams)
     prediction = np.argmax(probabilities, axis=-1)
 
-    run_results = metrics(prediction, test_gt.astype(np.double), ignored_labels=hyperparams['ignored_labels'], n_classes=N_CLASSES)
+    run_results = metrics(prediction, test_gt, ignored_labels=hyperparams['ignored_labels'], n_classes=N_CLASSES)
+    print(run_results)
 
     mask = np.zeros(test_gt.shape, dtype='bool')
     for l in IGNORED_LABELS:
@@ -314,6 +321,5 @@ for run in range(N_RUNS):
     color_prediction = convert_to_color(prediction)
     results.append(run_results)
 
-if N_RUNS > 1:
     show_results(results, None, label_values=LABEL_VALUES, agregated=True)
 

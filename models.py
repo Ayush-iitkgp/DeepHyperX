@@ -37,6 +37,7 @@ def get_model(name, **kwargs):
     weights[torch.LongTensor(kwargs['ignored_labels'])] = 0.
     weights = weights.to(device)
     weights = kwargs.setdefault('weights', weights)
+    print(weights)
 
     if name == 'nn':
         kwargs.setdefault('patch_size', 1)
@@ -1064,7 +1065,7 @@ def save_model(model, model_name, dataset_name, **kwargs):
      if not os.path.isdir(model_dir):
          os.makedirs(model_dir, exist_ok=True)
      if isinstance(model, torch.nn.Module):
-         filename = str(datetime.datetime.now().time()) + "_epoch{epoch}_{metric:.2f}".format(**kwargs)
+         filename = "epoch{epoch}_{metric:.2f}".format(**kwargs)
          tqdm.write("Saving neural network weights in {}".format(filename))
          torch.save(model.state_dict(), model_dir + filename + '.pth')
      else:

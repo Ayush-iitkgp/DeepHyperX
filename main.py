@@ -187,48 +187,49 @@ N_CLASSES = len(LABEL_VALUES)
 # Number of bands (last dimension of the image tensor)
 N_BANDS = 55
 
-def get_training_data(num):
-    img = np.empty(shape=[0, 540, 55])
-    train_gt =  np.empty(shape=[0,540])
-    
-    map_image,tiff_image = file_name_train(num)
-    img_k = Image.open(map_image)
-    img_arr = np.array(img_k)
-    img_arr = img_arr
-    y_tmp = img_arr[:,:,1] == 255
-    train_gt = np.append(train_gt, y_tmp, axis = 0)
+def get_training_data(train_num):
+    img = np.empty(shape=[0, 540, 55], dtype=np.float32)
+    train_gt =  np.empty(shape=[0,540], dtype=np.float32)
+    for num in train_num:
+        map_image,tiff_image = file_name_train(num)
+        img_k = Image.open(map_image)
+        img_arr = np.array(img_k)
+        img_arr = img_arr
+        y_tmp = img_arr[:,:,1] == 255
+        train_gt = np.append(train_gt, y_tmp, axis = 0)
 
-    im = Image.open(tiff_image)
-    h,w = np.array(im).shape
-    tiffarray = np.zeros((h,w,im.n_frames))
+        im = Image.open(tiff_image)
+        h,w = np.array(im).shape
+        tiffarray = np.zeros((h,w,im.n_frames))
 
-    for i in range(im.n_frames):
-        im.seek(i)
-        tiffarray[:,:,i] = np.array(im)
+        for i in range(im.n_frames):
+            im.seek(i)
+            tiffarray[:,:,i] = np.array(im)
     
-    img = np.append(img, tiffarray, axis = 0)
+        img = np.append(img, tiffarray, axis = 0)
     return img, train_gt
 
-def get_testing_data(num):
-    img_test = np.empty(shape=[0, 540, 55])
-    test_gt =  np.empty(shape=[0,540])
+def get_testing_data(test_num):
+    img_test = np.empty(shape=[0, 540, 55], dtype=np.float32)
+    test_gt =  np.empty(shape=[0,540], dtype=np.float32)
 
-    map_image,tiff_image = file_name_test(num)
-    img_k = Image.open(map_image)
-    img_arr = np.array(img_k)
-    img_arr = img_arr
-    y_tmp = img_arr[:,:,1] == 255
-    test_gt = np.append(test_gt, y_tmp, axis = 0)
+    for num in test_num:
+        map_image,tiff_image = file_name_test(num)
+        img_k = Image.open(map_image)
+        img_arr = np.array(img_k)
+        img_arr = img_arr
+        y_tmp = img_arr[:,:,1] == 255
+        test_gt = np.append(test_gt, y_tmp, axis = 0)
 
-    im = Image.open(tiff_image)
-    h,w = np.array(im).shape
-    tiffarray = np.zeros((h,w,im.n_frames))
+        im = Image.open(tiff_image)
+        h,w = np.array(im).shape
+        tiffarray = np.zeros((h,w,im.n_frames))
 
-    for i in range(im.n_frames):
-        im.seek(i)
-        tiffarray[:,:,i] = np.array(im)
-    # tiffarray = tiffarray.
-    img_test = np.append(img_test, tiffarray, axis = 0)
+        for i in range(im.n_frames):
+            im.seek(i)
+            tiffarray[:,:,i] = np.array(im)
+        # tiffarray = tiffarray.
+        img_test = np.append(img_test, tiffarray, axis = 0)
     return img_test, test_gt
 
 # Parameters for the SVM grid search
@@ -256,16 +257,17 @@ hyperparams.update({'n_classes': N_CLASSES, 'n_bands': N_BANDS, 'ignored_labels'
 hyperparams = dict((k, v) for k, v in hyperparams.items() if v is not None)
 
 train_num = [61, 62, 100, 101, 120, 121, 123, 138]
-# train_num = [61]
-test_num = [61]
+# train_num = [61, 62]
+test_num = [76, 77]
 
 results = []
-N_RUNS = len(train_num)
-img, train_gt = get_training_data(train_num[0])
+N_RUNS = 1
+img, train_gt = get_training_data(train_num)
 if CLASS_BALANCING:
     weights = compute_imf_weights(train_gt, N_CLASSES, IGNORED_LABELS)
     print(weights.shape)
-    hyperparams['weights'] = torch.from_numpy(weights)
+    print(weights.dtype)
+    hyperparams['weights'] = torch.from_numpy(weights).float()
 
 model, optimizer, loss, hyperparams = get_model(MODEL, **hyperparams)
 
@@ -273,12 +275,13 @@ if CHECKPOINT is not None:
     model.load_state_dict(torch.load(CHECKPOINT))
 
 for run in range(N_RUNS):
-    print(run)
-    img, train_gt = get_training_data(train_num[run])
+    img, train_gt = get_training_data(train_num)
     train_gt, val_gt = sample_gt(train_gt, SAMPLE_PERCENTAGE, mode='random')
     # Generate the dataset
     train_dataset = HyperX(img, train_gt, **hyperparams)
-    print(train_dataset.data.shape)
+    # print(train_dataset.data.shape)
+    # print(train_dataset.data.dtype)
+    # print(train_dataset.label.dtype)
     train_loader = data.DataLoader(train_dataset,
                                        batch_size=hyperparams['batch_size'],
                                        #pin_memory=hyperparams['device'],
@@ -294,19 +297,18 @@ for run in range(N_RUNS):
     with torch.no_grad():
         for input, _ in train_loader:
             break
-        # summary(model.to(hyperparams['device']), input.size()[1:])
+        summary(model.to(hyperparams['device']), input.size()[1:])
 
     try:
-        pass
-        # train(model, optimizer, loss, train_loader, hyperparams['epoch'],
-        #           scheduler=hyperparams['scheduler'], device=hyperparams['device'],
-        #           supervision=hyperparams['supervision'], val_loader=val_loader)
+        # pass
+        train(model, optimizer, loss, train_loader, hyperparams['epoch'],
+                  scheduler=hyperparams['scheduler'], device=hyperparams['device'],
+                  supervision=hyperparams['supervision'], val_loader=val_loader)
     except KeyboardInterrupt:
         pass
 
 if N_RUNS >= 1:
-
-    img_test, test_gt = get_testing_data(test_num[0])
+    img_test, test_gt = get_testing_data(test_num)
     probabilities = test(model, img_test.astype(np.double), hyperparams)
     prediction = np.argmax(probabilities, axis=-1)
 

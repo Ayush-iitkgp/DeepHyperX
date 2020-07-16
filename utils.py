@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import random
 import numpy as np
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, precision_score, recall_score
 import sklearn.model_selection
 import seaborn as sns
 import itertools
@@ -313,6 +313,9 @@ def metrics(prediction, target, ignored_labels=[], n_classes=None):
         labels=range(n_classes))
 
     results["Confusion matrix"] = cm
+
+    results['Precision'] = precision_score(target, prediction, labels=range(n_classes))
+    results['Recall'] = recall_score(target, prediction, labels=range(n_classes))
 
     # Compute global accuracy
     total = np.sum(cm)

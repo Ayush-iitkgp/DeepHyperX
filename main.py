@@ -28,6 +28,7 @@ from skimage import io
 import seaborn as sns
 import visdom
 from PIL import Image
+from scipy.special import softmax
 
 
 import os
@@ -310,7 +311,11 @@ for run in range(N_RUNS):
 if N_RUNS >= 1:
     img_test, test_gt = get_testing_data(test_num)
     probabilities = test(model, img_test.astype(np.double), hyperparams)
-    prediction = np.argmax(probabilities, axis=-1)
+    # sum1 = np.sum(probabilities, axis=2).reshape(probabilities.shape[0],probabilities.shape[1])
+    prob = softmax(probabilities, axis = 2)
+    
+    # prediction = 
+    prediction = np.argmax(prob, axis=-1)
 
     run_results = metrics(prediction, test_gt, ignored_labels=hyperparams['ignored_labels'], n_classes=N_CLASSES)
     print(run_results)

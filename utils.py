@@ -314,8 +314,6 @@ def metrics(prediction, target, ignored_labels=[], n_classes=None):
 
     results["Confusion matrix"] = cm
 
-    # results['Precision'] = precision_score(target, prediction, labels=range(n_classes))
-    # results['Recall'] = recall_score(target, prediction, labels=range(n_classes))
     results['classification_report'] = classification_report(target, prediction, labels=range(n_classes))
 
     # Compute global accuracy

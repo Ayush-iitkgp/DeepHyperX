@@ -311,7 +311,6 @@ for run in range(N_RUNS):
 if N_RUNS >= 1:
     img_test, test_gt = get_testing_data(test_num)
     probabilities = test(model, img_test.astype(np.double), hyperparams)
-    # sum1 = np.sum(probabilities, axis=2).reshape(probabilities.shape[0],probabilities.shape[1])
     prob = softmax(probabilities, axis = 2)
     
     # prediction = 

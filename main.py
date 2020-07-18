@@ -301,10 +301,10 @@ for run in range(N_RUNS):
         summary(model.to(hyperparams['device']), input.size()[1:])
 
     try:
-        # pass
-        train(model, optimizer, loss, train_loader, hyperparams['epoch'],
-                  scheduler=hyperparams['scheduler'], device=hyperparams['device'],
-                  supervision=hyperparams['supervision'], val_loader=val_loader)
+        pass
+        # train(model, optimizer, loss, train_loader, hyperparams['epoch'],
+        #           scheduler=hyperparams['scheduler'], device=hyperparams['device'],
+        #           supervision=hyperparams['supervision'], val_loader=val_loader)
     except KeyboardInterrupt:
         pass
 

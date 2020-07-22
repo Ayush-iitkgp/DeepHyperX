@@ -36,6 +36,12 @@ from utils import metrics, convert_to_color_, convert_from_color_,\
     sample_gt, build_dataset, show_results, compute_imf_weights, get_device
 from datasets import get_dataset, HyperX, open_file, DATASETS_CONFIG
 from models import get_model, train, test, save_model
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import PrecisionRecallDisplay
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve
+from sklearn.metrics import RocCurveDisplay
+from scipy.special import softmax
 
 import argparse
 
@@ -310,6 +316,17 @@ for run in range(N_RUNS):
 if N_RUNS >= 1:
     img_test, test_gt = get_testing_data(test_num)
     probabilities = test(model, img_test.astype(np.double), hyperparams)
+    probabilities = softmax(probabilities)
+    prec, recall, _ = precision_recall_curve(test_gt.flatten(), probabilities[:,:,1].flatten())
+    pr_display = PrecisionRecallDisplay(precision=prec, recall=recall).plot()
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
+    pr_display.plot(ax = ax1)
+    fpr, tpr, _ = roc_curve(test_gt.flatten(), probabilities[:,:,1].flatten())
+    roc_display = RocCurveDisplay(fpr=fpr, tpr=tpr).plot()
+    roc_display.plot(ax=ax2)
+    fig.savefig('precision_recall_and_roc_curve.png')
+    plt.close(fig)
+
     prediction = np.argmax(probabilities, axis=-1)
 
     run_results = metrics(prediction, test_gt, ignored_labels=hyperparams['ignored_labels'], n_classes=N_CLASSES)

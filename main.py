@@ -309,28 +309,28 @@ for run in range(N_RUNS):
         summary(model.to(hyperparams['device']), input.size()[1:])
 
     try:
-        pass
-        # train(model, optimizer, loss, train_loader, hyperparams['epoch'],
-        #           scheduler=hyperparams['scheduler'], device=hyperparams['device'],
-        #           supervision=hyperparams['supervision'], val_loader=val_loader)
+        # pass
+        train(model, optimizer, loss, train_loader, hyperparams['epoch'],
+                  scheduler=hyperparams['scheduler'], device=hyperparams['device'],
+                  supervision=hyperparams['supervision'], val_loader=val_loader)
     except KeyboardInterrupt:
         pass
 
 if N_RUNS >= 1:
     img_test, test_gt = get_testing_data(test_num)
     probabilities = test(model, img_test.astype(np.double), hyperparams)
-    probabilities = softmax(probabilities)
-    prediction = 1* probabilities[:,:,1] > threshold
+    probabilities = softmax(probabilities, axis = -1)
+    prediction = 1 * (probabilities[:,:,1] > threshold)
      
-    # prec, recall, _ = precision_recall_curve(test_gt.flatten(), probabilities[:,:,1].flatten())
-    # pr_display = PrecisionRecallDisplay(precision=prec, recall=recall).plot()
-    # fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
-    # pr_display.plot(ax = ax1)
-    # fpr, tpr, _ = roc_curve(test_gt.flatten(), probabilities[:,:,1].flatten())
-    # roc_display = RocCurveDisplay(fpr=fpr, tpr=tpr).plot()
-    # roc_display.plot(ax = ax2)
-    # fig.savefig('precision_recall_and_roc_curve.png')
-    # plt.close(fig)
+    prec, recall, _ = precision_recall_curve(test_gt.flatten(), probabilities[:,:,1].flatten())
+    pr_display = PrecisionRecallDisplay(precision=prec, recall=recall).plot()
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
+    pr_display.plot(ax = ax1)
+    fpr, tpr, _ = roc_curve(test_gt.flatten(), probabilities[:,:,1].flatten())
+    roc_display = RocCurveDisplay(fpr=fpr, tpr=tpr).plot()
+    roc_display.plot(ax = ax2)
+    fig.savefig('precision_recall_and_roc_curve.png')
+    plt.close(fig)
     # prediction = np.argmax(probabilities, axis=-1)
     run_results = metrics(prediction, test_gt, ignored_labels=hyperparams['ignored_labels'], n_classes=N_CLASSES)
     print(run_results)
@@ -342,12 +342,12 @@ if N_RUNS >= 1:
 
     color_prediction = convert_to_color(prediction)
     results.append(run_results)
-    vis_img_test = np.concatenate([np.zeros((test_gt.shape[0], test_gt.shape[1], 1)), (255 * test_gt).reshape(test_gt.shape[0], test_gt.shape[1], 1), np.zeros((test_gt.shape[0], test_gt.shape[1], 1))], axis = -1)
-    pred_img_test = np.concatenate([np.zeros((prediction.shape[0], prediction.shape[1], 1)), (255 * prediction).reshape(prediction.shape[0], prediction.shape[1], 1), np.zeros((prediction.shape[0], prediction.shape[1], 1))], axis = -1)
-    img_test = Image.fromarray(vis_img_test, 'RGB')
+    # vis_img_test = np.concatenate([np.zeros((test_gt.shape[0], test_gt.shape[1], 1)), (255 * test_gt).reshape(test_gt.shape[0], test_gt.shape[1], 1), np.zeros((test_gt.shape[0], test_gt.shape[1], 1))], axis = -1)
+    # pred_img_test = np.concatenate([np.zeros((prediction.shape[0], prediction.shape[1], 1)), (255 * prediction).reshape(prediction.shape[0], prediction.shape[1], 1), np.zeros((prediction.shape[0], prediction.shape[1], 1))], axis = -1)
+    img_test = Image.fromarray(255 * test_gt.astype(np.uint8))
     img_test.save('actual_image.png')
     img_test.show()
-    img_pred = Image.fromarray(pred_img_test, 'RGB')
+    img_pred = Image.fromarray(255 * prediction.astype(np.uint8))
     img_pred.save('pred_image.png')
     img_pred.show()
     show_results(results, None, label_values=LABEL_VALUES, agregated=True)
